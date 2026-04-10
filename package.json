@@ -1,7 +1,6 @@
 {
   "name": "bezalel",
   "version": "1.0.0",
-  "description": "Bezalel — The Spirit-Filled AI Forge. React PWA super-app.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +13,6 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
-    "vite": "^5.0.0",
-    "vite-plugin-pwa": "^0.17.0"
+    "vite": "^5.0.0"
   }
 }
