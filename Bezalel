@@ -940,4 +940,4 @@ export default function Bezalel(){
       </div>
     </>
   );
-}
+} 
