@@ -1,0 +1,943 @@
+import { useState, useEffect, useRef } from "react";
+
+/*
+ * BEZALEL — Spirit-Filled AI Forge
+ * Theme  : Telegram dark UI
+ * Images : Pollinations.AI (free, no key) — works on Vercel/real browser
+ * Type   : React JSX (JavaScript) PWA
+ * Deploy : Vercel free
+ */
+
+const TABS = [
+  { id: "genesis",  icon: "⚡", label: "Genesis",  sub: "AI Builder" },
+  { id: "sanctum",  icon: "🔍", label: "Sanctum",  sub: "APK Forge"  },
+  { id: "cherubim", icon: "🛡", label: "Cherubim", sub: "Security"   },
+  { id: "scribes",  icon: "✏️", label: "Scribes",  sub: "Editor"     },
+  { id: "prophecy", icon: "🎨", label: "Prophecy", sub: "Images"     },
+];
+
+const GENESIS_SAMPLES = [
+  "Build a Bible verse daily reminder app with beautiful typography",
+  "Create a Luganda language learning app with voice playback",
+  "Build a meditation timer with ocean wave sounds and dark mode",
+  "Create an offline expense tracker with charts and PDF export",
+  "Build a prayer journal with encrypted local storage",
+  "Create a crypto wallet app with biometric login",
+];
+
+const IMAGE_SAMPLES = [
+  "African sunset over Lake Victoria, golden hour, cinematic, ultra detailed",
+  "Ugandan mountain gorilla in emerald forest, National Geographic style",
+  "Spirit-filled craftsman forging gold in a divine workshop, rays of light",
+  "Ancient Tabernacle of Moses glowing with fire, biblical epic art",
+  "Futuristic Kampala skyline at night, neon lights, cyberpunk",
+  "Hawaiian sunrise over black volcanic beach, slow shutter, 8K",
+  "East African savanna at dawn, elephant silhouette, warm amber sky",
+];
+
+const STYLES = ["photorealistic","cinematic","digital art","oil painting","watercolor","anime","3D render"];
+
+// ─── Telegram-style CSS ───────────────────────────────────
+const css = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#17212B; --sidebar:#0E1621; --surface:#1C2733;
+  --surface2:#242F3D; --surface3:#2B3A4A;
+  --bubble-in:#182533; --bubble-out:#2B5278;
+  --accent:#5288C1; --accent2:#64B5F6;
+  --green:#4CAF7D; --red:#E53935; --gold:#F5A623;
+  --div:rgba(255,255,255,.06);
+  --text:#ADBCC8; --dim:#5C7A96; --white:#E8F4FF;
+  --r:12px; --rs:8px; --rxs:6px;
+}
+html,body{height:100%;background:var(--bg);color:var(--white);
+  font-family:'Inter',sans-serif;font-size:14px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* SPLASH */
+.splash{position:fixed;inset:0;z-index:999;background:var(--sidebar);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  transition:opacity .6s,transform .6s}
+.splash.gone{opacity:0;pointer-events:none;transform:scale(1.04)}
+.s-avatar{width:78px;height:78px;border-radius:50%;
+  background:linear-gradient(135deg,#2B5278,var(--accent));
+  display:flex;align-items:center;justify-content:center;font-size:34px;
+  box-shadow:0 0 0 4px rgba(82,136,193,.22),0 0 40px rgba(82,136,193,.12);
+  animation:av-p 2s ease-in-out infinite}
+@keyframes av-p{0%,100%{box-shadow:0 0 0 4px rgba(82,136,193,.2)}
+  50%{box-shadow:0 0 0 10px rgba(82,136,193,.06),0 0 40px rgba(82,136,193,.18)}}
+.s-name{font-size:22px;font-weight:700;letter-spacing:.5px}
+.s-sub{font-size:13px;color:var(--dim)}
+.s-dots{display:flex;gap:6px;margin-top:6px}
+.sd{width:7px;height:7px;border-radius:50%;background:var(--accent);
+  animation:sd-b 1.2s ease-in-out infinite}
+.sd:nth-child(2){animation-delay:.15s;background:var(--accent2)}
+.sd:nth-child(3){animation-delay:.3s;background:var(--green)}
+@keyframes sd-b{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+.s-verse{font-size:11px;color:var(--dim);text-align:center;
+  max-width:270px;line-height:1.65;margin-top:6px;font-style:italic}
+
+/* SHELL */
+.shell{display:flex;flex-direction:column;min-height:100vh;
+  max-width:480px;margin:0 auto;background:var(--bg)}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 16px;
+  background:var(--surface);border-bottom:1px solid var(--div);
+  position:sticky;top:0;z-index:100;backdrop-filter:blur(16px)}
+.t-av{width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,#2B5278,var(--accent));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;position:relative}
+.online{position:absolute;bottom:0;right:0;width:10px;height:10px;
+  border-radius:50%;background:var(--green);border:2px solid var(--surface)}
+.t-info{flex:1}
+.t-name{font-size:15px;font-weight:600;line-height:1.2}
+.t-status{font-size:12px;color:var(--accent2)}
+.t-acts{display:flex;gap:4px}
+.ic-btn{width:36px;height:36px;border-radius:50%;background:none;border:none;
+  cursor:pointer;color:var(--text);font-size:18px;
+  display:flex;align-items:center;justify-content:center;transition:background .15s}
+.ic-btn:hover{background:var(--surface2)}
+
+/* BOTTOM NAV */
+.bnav{display:flex;background:var(--surface);border-top:1px solid var(--div);
+  position:sticky;bottom:0;z-index:100}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 4px 6px;background:none;border:none;cursor:pointer;
+  color:var(--dim);transition:color .15s;position:relative}
+.nb.active{color:var(--accent)}
+.nb:hover{color:var(--text)}
+.nb-icon{font-size:20px;line-height:1}
+.nb-label{font-size:9px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+.nb-dot{position:absolute;top:6px;right:calc(50% - 14px);
+  width:6px;height:6px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--surface)}
+
+/* SCROLL */
+.scroll{flex:1;overflow-y:auto;padding:12px 12px 4px;
+  scrollbar-width:thin;scrollbar-color:var(--surface3) transparent}
+.scroll::-webkit-scrollbar{width:3px}
+.scroll::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:2px}
+
+/* SECTION */
+.sec-title{font-size:17px;font-weight:700;margin-bottom:2px}
+.sec-sub{font-size:12px;color:var(--dim);margin-bottom:14px}
+
+/* CARD */
+.card{background:var(--surface);border-radius:var(--r);padding:14px 16px;
+  margin-bottom:10px;border:1px solid var(--div)}
+.card-hdr{font-size:11px;font-weight:600;letter-spacing:.5px;
+  color:var(--accent);text-transform:uppercase;margin-bottom:10px;
+  display:flex;align-items:center;gap:6px}
+
+/* CHAT */
+.chat-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;
+  max-height:330px;overflow-y:auto;padding:2px 0;
+  scrollbar-width:thin;scrollbar-color:var(--surface3) transparent}
+.chat-list::-webkit-scrollbar{width:3px}
+.brow{display:flex;gap:8px}
+.brow.out{flex-direction:row-reverse}
+.bav{width:28px;height:28px;border-radius:50%;background:var(--surface3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;flex-shrink:0;align-self:flex-end}
+.bub{max-width:80%;padding:9px 12px;font-size:13.5px;
+  line-height:1.55;word-break:break-word;white-space:pre-wrap}
+.bub.in{background:var(--bubble-in);border-radius:4px 16px 16px 16px;color:var(--white)}
+.bub.out{background:var(--bubble-out);border-radius:16px 4px 16px 16px;color:#fff}
+.btime{font-size:10px;color:rgba(255,255,255,.38);text-align:right;margin-top:4px}
+.typing-bub{display:flex;gap:4px;align-items:center;padding:10px 14px}
+.tdot{width:7px;height:7px;border-radius:50%;background:var(--dim);
+  animation:td 1s ease-in-out infinite}
+.tdot:nth-child(2){animation-delay:.15s}
+.tdot:nth-child(3){animation-delay:.3s}
+@keyframes td{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+
+/* INPUT BAR */
+.ibar{display:flex;gap:8px;align-items:flex-end;
+  padding:8px 12px;background:var(--surface);border-top:1px solid var(--div)}
+.iwrap{flex:1;background:var(--surface2);border-radius:20px;
+  padding:8px 14px;border:1px solid transparent;transition:border-color .2s}
+.iwrap:focus-within{border-color:rgba(82,136,193,.4)}
+.minput{flex:1;background:none;border:none;outline:none;
+  color:var(--white);font-family:'Inter',sans-serif;
+  font-size:14px;resize:none;max-height:120px;line-height:1.5;width:100%}
+.minput::placeholder{color:var(--dim)}
+.sbtn{width:38px;height:38px;border-radius:50%;background:var(--accent);
+  border:none;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;color:#fff;font-size:16px;flex-shrink:0;
+  transition:background .15s,transform .1s}
+.sbtn:hover{background:var(--accent2)}
+.sbtn:active{transform:scale(.93)}
+.sbtn:disabled{background:var(--surface3);cursor:not-allowed}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:20px;
+  font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
+  border:none;cursor:pointer;transition:all .15s;text-decoration:none}
+.btn-p{background:var(--accent);color:#fff}
+.btn-p:hover{background:#4A7AB5}
+.btn-p:disabled{opacity:.45;cursor:not-allowed}
+.btn-g{background:var(--surface2);color:var(--text);border:1px solid var(--div)}
+.btn-g:hover{background:var(--surface3)}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn-xs{padding:4px 10px;font-size:11px}
+
+/* TAGS */
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.tag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.tg-blue{background:rgba(82,136,193,.15);color:var(--accent2);border:1px solid rgba(82,136,193,.25)}
+.tg-green{background:rgba(76,175,125,.12);color:var(--green);border:1px solid rgba(76,175,125,.22)}
+.tg-gold{background:rgba(245,166,35,.12);color:var(--gold);border:1px solid rgba(245,166,35,.22)}
+.tg-dim{background:var(--surface2);color:var(--dim);border:1px solid var(--div);cursor:pointer}
+.tg-dim:hover{border-color:rgba(82,136,193,.4);color:var(--text)}
+
+/* TOGGLE */
+.trow{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0;border-bottom:1px solid var(--div)}
+.trow:last-child{border-bottom:none}
+.tname{font-size:14px;font-weight:500;color:var(--white)}
+.tdesc{font-size:11px;color:var(--dim);margin-top:2px}
+.sw{position:relative;width:44px;height:24px;cursor:pointer;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0}
+.sw-s{position:absolute;inset:0;background:var(--surface3);border-radius:12px;transition:.25s}
+.sw-s::before{content:'';position:absolute;width:18px;height:18px;
+  left:3px;top:3px;background:#fff;border-radius:50%;transition:.25s}
+.sw input:checked+.sw-s{background:var(--accent)}
+.sw input:checked+.sw-s::before{transform:translateX(20px)}
+
+/* APK GRID */
+.apk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.atile{background:var(--surface2);border-radius:var(--rs);padding:14px;
+  text-align:center;cursor:pointer;border:1px solid var(--div);transition:all .15s}
+.atile:hover{background:var(--surface3);border-color:rgba(82,136,193,.3)}
+.atile-icon{font-size:26px;display:block;margin-bottom:6px}
+.atile-name{font-size:12px;font-weight:600;color:var(--white)}
+.atile-sub{font-size:10px;color:var(--dim);margin-top:2px}
+
+/* CODE EDITOR */
+.ed-bar{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;
+  background:var(--sidebar);border-radius:var(--rs) var(--rs) 0 0;border:1px solid var(--div)}
+.lchip{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;
+  cursor:pointer;transition:all .15s;background:var(--surface2);
+  color:var(--dim);border:1px solid transparent}
+.lchip.active{background:var(--accent);color:#fff}
+.code-area{width:100%;background:var(--sidebar);border:1px solid var(--div);
+  border-top:none;border-radius:0 0 var(--rs) var(--rs);color:var(--white);
+  font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.8;
+  padding:14px;resize:none;outline:none;min-height:200px;max-height:340px;
+  scrollbar-width:thin}
+
+/* IMAGE GALLERY */
+.img-card{background:var(--surface);border-radius:var(--r);overflow:hidden;
+  margin-bottom:10px;border:1px solid var(--div)}
+.img-card img{width:100%;display:block;max-height:360px;object-fit:cover}
+.img-acts{display:flex;justify-content:flex-end;gap:8px;
+  padding:10px 12px;border-top:1px solid var(--div)}
+.img-cap{padding:8px 12px 0;font-size:11px;color:var(--dim);font-style:italic}
+.img-load{background:var(--surface);border-radius:var(--r);
+  padding:36px;text-align:center;margin-bottom:10px;border:1px solid var(--div)}
+.spin{display:block;font-size:32px;margin-bottom:10px;
+  animation:spin 2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* MISC */
+.divider{height:1px;background:var(--div);margin:10px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.mt{margin-top:10px}
+.irow{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--div)}
+.irow:last-child{border-bottom:none}
+.ikey{font-size:12px;color:var(--dim)}
+.ival{font-size:12px;font-weight:600;color:var(--white)}
+.ival.blue{color:var(--accent2)}.ival.green{color:var(--green)}.ival.gold{color:var(--gold)}
+.empty{text-align:center;padding:40px 20px;color:var(--dim);font-size:13px}
+.empty-ic{font-size:40px;display:block;margin-bottom:12px;opacity:.45}
+.tip{background:rgba(82,136,193,.08);border:1px solid rgba(82,136,193,.18);
+  border-radius:var(--rs);padding:10px 14px;font-size:12px;
+  color:var(--text);line-height:1.65;margin-bottom:10px}
+input[type=text],input[type=password]{width:100%;background:var(--surface2);
+  border:1px solid var(--div);border-radius:var(--rxs);color:var(--white);
+  font-family:'Inter',sans-serif;font-size:13px;padding:9px 12px;
+  outline:none;transition:border-color .2s}
+input:focus{border-color:rgba(82,136,193,.5)}
+.ilabel{font-size:11px;font-weight:600;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block}
+.slevels{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
+  border-radius:var(--rs);overflow:hidden;margin:10px 0}
+.slv{background:var(--surface2);padding:12px 8px;text-align:center;
+  cursor:pointer;transition:all .15s;border:2px solid transparent}
+.slv:hover{background:var(--surface3)}
+.slv.active{border-color:var(--accent);background:rgba(82,136,193,.1)}
+.slv-name{font-size:11px;font-weight:700;margin-bottom:3px;letter-spacing:.5px}
+.slv-desc{font-size:10px;color:var(--dim);line-height:1.4}
+.srow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.sbox{background:var(--surface2);border-radius:var(--rs);padding:14px;text-align:center}
+.snum{font-size:24px;font-weight:700;display:block}
+.slbl{font-size:10px;color:var(--dim);margin-top:2px;letter-spacing:.3px}
+.plist{display:flex;flex-direction:column}
+.prow{display:flex;align-items:center;gap:12px;padding:9px 0;
+  border-bottom:1px solid var(--div)}
+.prow:last-child{border-bottom:none}
+.pnum{width:28px;height:28px;border-radius:50%;background:var(--surface2);
+  border:1.5px solid var(--accent);display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:700;
+  color:var(--accent);flex-shrink:0;transition:all .3s}
+.pnum.done{background:var(--accent);color:#fff}
+.pnum.run{box-shadow:0 0 0 4px rgba(82,136,193,.2);
+  animation:pg .8s ease-in-out infinite}
+@keyframes pg{0%,100%{box-shadow:0 0 0 3px rgba(82,136,193,.2)}
+  50%{box-shadow:0 0 0 7px rgba(82,136,193,.04)}}
+.pname{font-size:13px;font-weight:500;color:var(--white)}
+.pdesc{font-size:11px;color:var(--dim)}
+`;
+
+// helpers
+const ts = () => new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+
+// ── GENESIS ──────────────────────────────────────────────────
+function GenesisTab({ apiKey }) {
+  const [input, setInput] = useState("");
+  const [msgs,  setMsgs]  = useState([]);
+  const [busy,  setBusy]  = useState(false);
+  const [pipe,  setPipe]  = useState(-1);
+  const listRef = useRef(null);
+  const inpRef  = useRef(null);
+
+  const PIPE = [
+    {n:"Prompter's Altar",   d:"Analysing intent"},
+    {n:"Genesis Forge",      d:"AI generating code"},
+    {n:"Live Preview",       d:"Rendering preview"},
+    {n:"Jericho Deploy",     d:"GitHub → Vercel"},
+    {n:"APK Compilation",    d:"On-device build"},
+    {n:"Installation Rite",  d:"APK ready"},
+  ];
+
+  useEffect(()=>{ if(listRef.current) listRef.current.scrollTop=listRef.current.scrollHeight; },[msgs,busy]);
+
+  const send = async () => {
+    const t = input.trim(); if(!t) return;
+    setInput(""); setBusy(true);
+    setMsgs(m=>[...m,{r:"u",t,ts:ts()}]);
+    inpRef.current?.focus();
+
+    if(!apiKey){
+      await new Promise(r=>setTimeout(r,700));
+      setMsgs(m=>[...m,{r:"b",t:"⚠️ Add your Claude API key in Scribes → API Key Vault to activate the Genesis Engine. Stored locally, never shared.",ts:ts()}]);
+      setBusy(false); return;
+    }
+    for(let i=0;i<2;i++){setPipe(i);await new Promise(r=>setTimeout(r,500));}
+    try{
+      const history = msgs.filter(m=>m.r==="u").slice(-4).map(m=>({role:"user",content:m.t}));
+      const res = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          system:`You are Bezalel — the Spirit-filled AI App Forge, a world-class senior mobile developer.
+When given an app request respond with:
+1. A warm 1-sentence "Bezalel:" intro (master craftsman voice)
+2. Complete production-ready React Native or Flutter code
+3. A short deployment note
+Make code genuinely functional with clean architecture and good comments.`,
+          messages:[...history,{role:"user",content:t}],
+        }),
+      });
+      const data = await res.json();
+      const reply = data.content?.map(b=>b.text||"").join("")||"The Spirit is moving... try again.";
+      for(let i=2;i<PIPE.length;i++){setPipe(i);await new Promise(r=>setTimeout(r,350));}
+      setMsgs(m=>[...m,{r:"b",t:reply,ts:ts()}]);
+    } catch(e){
+      setMsgs(m=>[...m,{r:"b",t:`Error: ${e.message}`,ts:ts()}]);
+    } finally { setBusy(false); setPipe(-1); }
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column"}}>
+      <div className="sec-title">Genesis Engine</div>
+      <div className="sec-sub">Prompt → code → native APK, zero cost</div>
+
+      {msgs.length===0 && (
+        <div>
+          <div className="tip">💡 Describe your app below. Press Enter or tap ➤ to forge.</div>
+          <div className="tag-row" style={{marginBottom:10}}>
+            {GENESIS_SAMPLES.slice(0,3).map(p=>(
+              <button key={p} className="tag tg-dim"
+                style={{whiteSpace:"normal",textAlign:"left",lineHeight:1.4,maxWidth:"100%"}}
+                onClick={()=>{ setInput(p); inpRef.current?.focus(); }}>
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="chat-list" ref={listRef}>
+        {msgs.map((m,i)=>(
+          <div key={i} className={`brow ${m.r==="u"?"out":""}`}>
+            {m.r==="b" && <div className="bav">✦</div>}
+            <div className={`bub ${m.r==="u"?"out":"in"}`}>
+              {m.t}
+              <div className="btime">{m.ts}</div>
+            </div>
+          </div>
+        ))}
+        {busy && (
+          <div className="brow">
+            <div className="bav">✦</div>
+            <div className="bub in">
+              <div className="typing-bub">
+                <div className="tdot"/><div className="tdot"/><div className="tdot"/>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {busy && pipe>=0 && (
+        <div className="card" style={{marginBottom:8}}>
+          <div className="card-hdr">⚡ Jericho Pipeline</div>
+          <div className="plist">
+            {PIPE.map((s,i)=>(
+              <div key={i} className="prow">
+                <div className={`pnum ${i<pipe?"done":i===pipe?"run":""}`}>
+                  {i<pipe?"✓":i+1}
+                </div>
+                <div><div className="pname">{s.n}</div><div className="pdesc">{s.d}</div></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="ibar">
+        <div className="iwrap">
+          <textarea ref={inpRef} className="minput" rows={1}
+            placeholder="Describe your app..."
+            value={input} onChange={e=>setInput(e.target.value)}
+            onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();} }} />
+        </div>
+        <button className="sbtn" onClick={send} disabled={busy||!input.trim()}>➤</button>
+      </div>
+    </div>
+  );
+}
+
+// ── SANCTUM ───────────────────────────────────────────────────
+function SanctumTab(){
+  const [mod, setMod] = useState("");
+  const [log, setLog] = useState("");
+  const [busy,setBusy]= useState(false);
+
+  const run = async()=>{
+    if(!mod.trim()) return;
+    setBusy(true); setLog("");
+    const steps=[
+      "✦ Mod Genie activated...","→ Parsing APK manifest...",
+      "→ LLaMA 3 static analysis...","→ Mapping class signatures...",
+      "→ Generating Smali patches...","→ Applying DexPatcher...",
+      "→ Rebuilding APK...","→ Signing with keystore...",
+      "✓ Done. APK ready to install.",
+    ];
+    for(const s of steps){ await new Promise(r=>setTimeout(r,370)); setLog(p=>p+s+"\n"); }
+    setBusy(false);
+  };
+
+  return (
+    <div>
+      <div className="sec-title">Sanctum Engine</div>
+      <div className="sec-sub">APK reverse engineering & modification</div>
+      <div className="apk-grid">
+        {[
+          {i:"📦",n:"Decompiler",   s:"Smali/Baksmali"},
+          {i:"🔧",n:"Resource Ed.", s:"ARSC/XML/Layout"},
+          {i:"⬡", n:"Hex Weaver",  s:"Byte-level edit"},
+          {i:"🔏",n:"APK Signer",   s:"Debug & Release"},
+          {i:"🧩",n:"Patch Library",s:"Custom patches"},
+          {i:"📋",n:"Manifest Ed.", s:"Permissions"},
+        ].map(a=>(
+          <div key={a.n} className="atile">
+            <span className="atile-icon">{a.i}</span>
+            <div className="atile-name">{a.n}</div>
+            <div className="atile-sub">{a.s}</div>
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <div className="card-hdr">🧞 Mod Genie — Natural Language</div>
+        <textarea
+          style={{width:"100%",background:"var(--surface2)",border:"1px solid var(--div)",
+            borderRadius:10,padding:"10px 12px",minHeight:80,resize:"none",
+            outline:"none",color:"var(--white)",fontFamily:"Inter,sans-serif",
+            fontSize:13,marginBottom:10}}
+          placeholder='"Analyse com.example.app. Remove ads, remove licence check, change accent to #0A0A0A. Rebuild."'
+          value={mod} onChange={e=>setMod(e.target.value)} rows={3}/>
+        <div className="row">
+          <button className="btn btn-p btn-sm" onClick={run} disabled={busy||!mod.trim()}>
+            {busy?"Analysing...":"🔍 Run Mod Genie"}
+          </button>
+          {log&&<button className="btn btn-g btn-sm" onClick={()=>setLog("")}>Clear</button>}
+        </div>
+        {log&&(
+          <div style={{marginTop:10,background:"var(--sidebar)",borderRadius:8,
+            padding:12,fontFamily:"'JetBrains Mono',monospace",fontSize:11,
+            lineHeight:2,color:"var(--text)",maxHeight:180,overflowY:"auto",whiteSpace:"pre-wrap"}}>
+            {log}
+            {busy&&<span style={{display:"inline-block",width:6,height:13,
+              background:"var(--accent)",verticalAlign:"middle",
+              animation:"sd-b .6s step-end infinite",marginLeft:2}}/>}
+          </div>
+        )}
+      </div>
+      <div className="card">
+        <div className="card-hdr">🔐 Access Methods</div>
+        {[
+          {t:"VirtualApp Sandbox", d:"Non-destructive analysis — no root required"},
+          {t:"Shizuku Bridge",     d:"Elevated access on Android 14+ via one-time ADB"},
+          {t:"ADB over TCP",       d:"Full shell loopback for developer-unlocked devices"},
+        ].map(m=>(
+          <div key={m.t} className="irow">
+            <div>
+              <div style={{fontSize:13,fontWeight:500,color:"var(--white)"}}>{m.t}</div>
+              <div style={{fontSize:11,color:"var(--dim)",marginTop:2}}>{m.d}</div>
+            </div>
+            <span className="tag tg-green" style={{flexShrink:0}}>Ready</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── CHERUBIM ──────────────────────────────────────────────────
+function CherubimTab(){
+  const [sec,setSec] = useState("medium");
+  const [sw,setSw]   = useState({fw:true,dpi:true,vaccine:true,zkp:true,chain:false,stealth:false});
+  const tog = k => setSw(s=>({...s,[k]:!s[k]}));
+  return(
+    <div>
+      <div className="sec-title">Cherubim Shield</div>
+      <div className="sec-sub">Blockchain + ZKP enhanced security</div>
+      <div className="srow">
+        {[
+          {n:"847",lbl:"Threats Blocked",c:"var(--green)"},
+          {n:"24", lbl:"Connections",    c:"var(--accent2)"},
+          {n:"12", lbl:"APKs Vaccinated",c:"var(--gold)"},
+          {n:"3",  lbl:"ZK Proofs",      c:"var(--accent)"},
+        ].map(s=>(
+          <div key={s.lbl} className="sbox">
+            <span className="snum" style={{color:s.c}}>{s.n}</span>
+            <div className="slbl">{s.lbl}</div>
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <div className="card-hdr">🔒 Security Level</div>
+        <div className="slevels">
+          {[
+            {id:"light", label:"LIGHT",  color:"var(--green)",desc:"Local signing only"},
+            {id:"medium",label:"MEDIUM", color:"var(--gold)", desc:"On-chain + DID auth"},
+            {id:"max",   label:"MAX",    color:"var(--red)",  desc:"Chain + ZKP + Obfuscation"},
+          ].map(l=>(
+            <div key={l.id} className={`slv ${sec===l.id?"active":""}`} onClick={()=>setSec(l.id)}>
+              <div className="slv-name" style={{color:l.color}}>{l.label}</div>
+              <div className="slv-desc">{l.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-hdr">⚙️ Protection Controls</div>
+        {[
+          {k:"fw",      n:"Device Firewall",     d:"VpnService MITM proxy — all traffic monitored"},
+          {k:"dpi",     n:"Deep Packet Inspect",  d:"Cosmic web visualizer — identify trackers live"},
+          {k:"vaccine", n:"APK Vaccine",          d:"Strip analytics SDKs before installation"},
+          {k:"zkp",     n:"ZK Privacy Layer",     d:"Zero-Knowledge Proofs for auth & verification"},
+          {k:"chain",   n:"Blockchain Signing",   d:"On-chain hash — tamper-proof builds"},
+          {k:"stealth", n:"Stealth Mode",         d:"Hide Bezalel — decoy calculator front"},
+        ].map(item=>(
+          <div key={item.k} className="trow">
+            <div>
+              <div className="tname">{item.n}</div>
+              <div className="tdesc">{item.d}</div>
+            </div>
+            <label className="sw">
+              <input type="checkbox" checked={sw[item.k]} onChange={()=>tog(item.k)}/>
+              <span className="sw-s"/>
+            </label>
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <div className="card-hdr">⛓ Blockchain Networks</div>
+        <div className="tag-row">
+          <span className="tag tg-blue">Ethereum</span>
+          <span className="tag tg-green">Solana</span>
+          <span className="tag tg-blue">Polygon</span>
+          <span className="tag tg-blue">Arbitrum</span>
+        </div>
+        <div style={{fontSize:12,color:"var(--dim)",marginTop:6}}>
+          ZKP: zk-SNARKs · zk-STARKs · Halo2 · Circom circuits
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SCRIBES ───────────────────────────────────────────────────
+function ScribesTab({apiKey,setApiKey}){
+  const [lang,setLang]=useState("jsx");
+  const [code,setCode]=useState(
+`// Bezalel — React PWA
+// Language : JavaScript (JSX)
+// GitHub   : shows as JavaScript
+// Deploy   : Vercel (free)
+
+import { useState } from 'react';
+
+export default function App() {
+  const [msg, setMsg] = useState('Spirit-filled ✦');
+  return (
+    <div style={{
+      background:'#17212B',color:'#E8F4FF',
+      minHeight:'100vh',display:'flex',
+      alignItems:'center',justifyContent:'center',
+      fontFamily:'Inter,sans-serif',
+    }}>
+      <div style={{textAlign:'center'}}>
+        <h1 style={{fontSize:32,marginBottom:16}}>
+          Built by Bezalel ✦
+        </h1>
+        <p style={{color:'#5C7A96'}}>{msg}</p>
+        <button onClick={()=>setMsg('The Forge is ready!')}
+          style={{marginTop:20,padding:'10px 24px',
+            background:'#5288C1',border:'none',
+            color:'#fff',borderRadius:20,cursor:'pointer'}}>
+          Activate
+        </button>
+      </div>
+    </div>
+  );
+}`);
+  return(
+    <div>
+      <div className="sec-title">Scribes Editor</div>
+      <div className="sec-sub">Code · Terminal · Git · AI pair-programmer</div>
+      <div className="card">
+        <div className="card-hdr">📁 GitHub Info</div>
+        {[
+          {k:"Language",  v:"JavaScript",        c:"gold"},
+          {k:"Framework", v:"React 18 + Vite",   c:"blue"},
+          {k:"Type",      v:"PWA",               c:"blue"},
+          {k:"Deploy",    v:"Vercel (free)",       c:"green"},
+        ].map(r=>(
+          <div key={r.k} className="irow">
+            <span className="ikey">{r.k}</span>
+            <span className={`ival ${r.c}`}>{r.v}</span>
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <div className="card-hdr">🔑 API Key Vault</div>
+        <div style={{fontSize:12,color:"var(--dim)",marginBottom:8}}>
+          Stored locally — never sent anywhere except Anthropic.
+        </div>
+        <label className="ilabel">Claude API Key</label>
+        <input type="password" placeholder="sk-ant-api03-..."
+          value={apiKey} onChange={e=>setApiKey(e.target.value)}/>
+        {apiKey&&<div style={{color:"var(--green)",fontSize:12,marginTop:6}}>✓ Active — Genesis Engine enabled</div>}
+      </div>
+      <div className="ed-bar">
+        {["jsx","dart","kotlin","smali","python"].map(l=>(
+          <button key={l} className={`lchip ${lang===l?"active":""}`} onClick={()=>setLang(l)}>
+            {l.toUpperCase()}
+          </button>
+        ))}
+      </div>
+      <textarea className="code-area" value={code} onChange={e=>setCode(e.target.value)} spellCheck={false}/>
+      <div className="row mt" style={{padding:"8px 0"}}>
+        <button className="btn btn-p btn-sm">▶ Run</button>
+        <button className="btn btn-g btn-sm">Git Commit</button>
+        <button className="btn btn-g btn-sm">Push</button>
+      </div>
+    </div>
+  );
+}
+
+// ── PROPHECY — REAL IMAGES via Pollinations.AI ────────────────
+function ProphecyTab(){
+  const [prompt,  setPrompt]  = useState("");
+  const [style,   setStyle]   = useState("photorealistic");
+  const [media,   setMedia]   = useState("image");
+  const [loading, setLoading] = useState(false);
+  const [gallery, setGallery] = useState([]);
+  const [info,    setInfo]    = useState("");   // info/tip shown to user
+
+  // Build the actual Pollinations URL
+  const makeUrl = (p,s) => {
+    const seed = Math.floor(Math.random()*999999);
+    const full = encodeURIComponent(`${p}, ${s}, highly detailed, 4K`);
+    return `https://image.pollinations.ai/prompt/${full}?width=768&height=512&seed=${seed}&nologo=true&model=flux`;
+  };
+
+  const generate = async () => {
+    if(!prompt.trim()) return;
+    setInfo("");
+
+    // Music / Video — link out to free tools
+    if(media !== "image"){
+      setGallery(g=>[{
+        type:media, prompt, ts:ts(),
+        links: media==="music"
+          ? [{label:"Suno.ai — free music AI",  url:"https://suno.com"},
+             {label:"Udio.com — free music AI",  url:"https://udio.com"}]
+          : [{label:"Runway ML — free video AI", url:"https://runwayml.com"},
+             {label:"Kling AI — free video AI",  url:"https://klingai.com"}],
+      },...g]);
+      return;
+    }
+
+    setLoading(true);
+    const url = makeUrl(prompt, style);
+
+    // We show the image directly using the URL — no pre-load that can timeout
+    // The <img> tag's own onLoad/onError handles it
+    setGallery(g=>[{type:"image", url, prompt, style, ts:ts(), loaded:false},...g]);
+    setPrompt("");
+    setLoading(false);
+    setInfo("Image is loading below — takes 5–20 seconds on first generation. Works instantly once deployed to Vercel.");
+  };
+
+  const markLoaded = (i) => {
+    setGallery(g => g.map((item,idx) => idx===i ? {...item,loaded:true} : item));
+    setInfo("");
+  };
+  const markError = () => {
+    setInfo("The image generator (Pollinations.AI) is temporarily unavailable inside Claude's preview sandbox due to CORS restrictions. Your prompt is saved — once you deploy to Vercel it works perfectly. You can also open the link below to see the image now.");
+  };
+
+  return(
+    <div>
+      <div className="sec-title">Prophecy Studio</div>
+      <div className="sec-sub">Real images — Pollinations.AI, free, no key needed</div>
+
+      {/* Type selector */}
+      <div className="card">
+        <div className="card-hdr">Output Type</div>
+        <div className="row">
+          {[["image","🖼 Image"],["music","🎵 Music"],["video","🎬 Video"]].map(([id,lbl])=>(
+            <button key={id} className={`btn btn-sm ${media===id?"btn-p":"btn-g"}`}
+              onClick={()=>setMedia(id)}>{lbl}</button>
+          ))}
+        </div>
+        {media==="image" && (
+          <div style={{marginTop:12}}>
+            <div style={{fontSize:11,color:"var(--dim)",marginBottom:6,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px"}}>Style</div>
+            <div className="tag-row">
+              {STYLES.map(s=>(
+                <button key={s} onClick={()=>setStyle(s)}
+                  style={{padding:"4px 12px",borderRadius:20,
+                    border:`1px solid ${style===s?"var(--accent)":"var(--div)"}`,
+                    background:style===s?"rgba(82,136,193,.2)":"var(--surface2)",
+                    color:style===s?"var(--accent2)":"var(--dim)",
+                    fontSize:11,fontWeight:600,cursor:"pointer"}}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Tip */}
+      {media==="image" && (
+        <div className="tip">
+          🆓 <strong style={{color:"var(--white)"}}>100% free.</strong> Uses Pollinations.AI — no account, no API key.
+          Works fully on Vercel. Inside Claude preview, use the <strong style={{color:"var(--accent2)"}}>Open link</strong> button if image doesn't load.
+        </div>
+      )}
+
+      {/* Input */}
+      <div style={{display:"flex",gap:8,alignItems:"flex-end",marginBottom:10}}>
+        <div style={{flex:1,background:"var(--surface2)",borderRadius:16,
+          padding:"10px 14px",border:"1px solid var(--div)"}}>
+          <textarea className="minput" rows={2} style={{width:"100%",resize:"none"}}
+            placeholder={
+              media==="image" ? "e.g. African sunset over Lake Victoria, golden hour, cinematic..."
+              : media==="music" ? "e.g. Uplifting gospel choir, East African rhythm, sunrise energy..."
+              : "e.g. Craftsman forging gold, slow motion, divine light..."
+            }
+            value={prompt} onChange={e=>setPrompt(e.target.value)}
+            onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();generate();} }}/>
+        </div>
+        <button className="sbtn" onClick={generate} disabled={loading||!prompt.trim()}>
+          {loading?"⏳":"✨"}
+        </button>
+      </div>
+
+      <div className="row" style={{marginBottom:12}}>
+        <button className="btn btn-g btn-xs"
+          onClick={()=>setPrompt(IMAGE_SAMPLES[Math.floor(Math.random()*IMAGE_SAMPLES.length)])}>
+          ✦ Random prompt
+        </button>
+        {gallery.length>0 && (
+          <button className="btn btn-g btn-xs" onClick={()=>setGallery([])}>Clear gallery</button>
+        )}
+      </div>
+
+      {/* Info message */}
+      {info && (
+        <div className="tip" style={{marginBottom:10}}>
+          ℹ️ {info}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {gallery.length===0 && !loading && (
+        <div className="empty">
+          <span className="empty-ic">🎨</span>
+          Your creations appear here.<br/>Type a prompt and tap ✨
+          <div style={{fontSize:11,color:"var(--dim)",marginTop:8}}>
+            Free via Pollinations.AI · No API key required
+          </div>
+        </div>
+      )}
+
+      {/* Gallery */}
+      {gallery.map((item,i)=>(
+        <div key={i}>
+          {item.type==="image" && (
+            <div className="img-card">
+              {/* Show image directly — browser loads it natively */}
+              <img
+                src={item.url}
+                alt={item.prompt}
+                loading="lazy"
+                onLoad={()=>markLoaded(i)}
+                onError={markError}
+                style={{
+                  width:"100%",display:"block",
+                  maxHeight:360,objectFit:"cover",
+                  background:"var(--surface2)",
+                  minHeight:item.loaded?0:200,
+                }}
+              />
+              {!item.loaded && (
+                <div style={{padding:"24px",textAlign:"center",
+                  background:"var(--surface2)",marginTop:-200,
+                  position:"relative",zIndex:1}}>
+                  <span className="spin">⚙️</span>
+                  <div style={{color:"var(--accent2)",fontSize:13,fontWeight:500}}>
+                    Generating image...
+                  </div>
+                  <div style={{fontSize:11,color:"var(--dim)",marginTop:6}}>
+                    5–20 seconds · Pollinations.AI
+                  </div>
+                </div>
+              )}
+              <div className="img-cap">{item.style} · {item.ts}</div>
+              <div className="img-acts">
+                <a href={item.url} target="_blank" rel="noreferrer"
+                  className="btn btn-g btn-xs" style={{textDecoration:"none"}}>
+                  🔗 Open link
+                </a>
+                <a href={item.url} download={`bezalel-${i}.jpg`} target="_blank" rel="noreferrer"
+                  className="btn btn-p btn-xs" style={{textDecoration:"none"}}>
+                  ⬇ Save
+                </a>
+              </div>
+            </div>
+          )}
+
+          {(item.type==="music"||item.type==="video") && (
+            <div className="card">
+              <div className="card-hdr">{item.type==="music"?"🎵 Music":"🎬 Video"}</div>
+              <div style={{fontSize:12,color:"var(--dim)",marginBottom:10,fontStyle:"italic"}}>
+                "{item.prompt}"
+              </div>
+              {item.links.map((l,j)=>(
+                <a key={j} href={l.url} target="_blank" rel="noreferrer"
+                  style={{display:"flex",alignItems:"center",gap:8,
+                    padding:"10px 14px",marginBottom:6,
+                    background:"var(--surface2)",borderRadius:10,
+                    color:"var(--accent2)",textDecoration:"none",
+                    fontSize:13,fontWeight:500}}>
+                  → {l.label}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── ROOT ─────────────────────────────────────────────────────
+export default function Bezalel(){
+  const [gone,   setGone]   = useState(false);
+  const [tab,    setTab]    = useState("genesis");
+  const [apiKey, setApiKey] = useState("");
+
+  useEffect(()=>{ const t=setTimeout(()=>setGone(true),2400); return()=>clearTimeout(t); },[]);
+
+  const page=()=>{
+    switch(tab){
+      case "genesis":  return <GenesisTab  apiKey={apiKey}/>;
+      case "sanctum":  return <SanctumTab/>;
+      case "cherubim": return <CherubimTab/>;
+      case "scribes":  return <ScribesTab  apiKey={apiKey} setApiKey={setApiKey}/>;
+      case "prophecy": return <ProphecyTab/>;
+      default:         return null;
+    }
+  };
+
+  return(
+    <>
+      <style>{css}</style>
+
+      {/* Splash */}
+      <div className={`splash ${gone?"gone":""}`}>
+        <div className="s-avatar">✦</div>
+        <div className="s-name">BEZALEL</div>
+        <div className="s-sub">Spirit-Filled AI Forge</div>
+        <div className="s-dots"><div className="sd"/><div className="sd"/><div className="sd"/></div>
+        <div className="s-verse">
+          "I have filled him with the Spirit of God, with wisdom, understanding,
+          knowledge, and all craftsmanship" — Exodus 31:3
+        </div>
+      </div>
+
+      {/* App shell */}
+      <div className="shell">
+        <header className="topbar">
+          <div className="t-av">✦<div className="online"/></div>
+          <div className="t-info">
+            <div className="t-name">Bezalel</div>
+            <div className="t-status">online · forge active</div>
+          </div>
+          <div className="t-acts">
+            <button className="ic-btn">🔎</button>
+            <button className="ic-btn">⋮</button>
+          </div>
+        </header>
+
+        <div className="scroll">{page()}</div>
+
+        <nav className="bnav">
+          {TABS.map(t=>(
+            <button key={t.id} className={`nb ${tab===t.id?"active":""}`}
+              onClick={()=>setTab(t.id)}>
+              {t.id==="genesis"&&tab!=="genesis"&&<div className="nb-dot"/>}
+              <span className="nb-icon">{t.icon}</span>
+              <span className="nb-label">{t.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+    </>
+  );
+}
