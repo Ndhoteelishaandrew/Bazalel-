@@ -1,2 +1,2 @@
-# Bezalel-
+# Bezalel
 Claude built application 
